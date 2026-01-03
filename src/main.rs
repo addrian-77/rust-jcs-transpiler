@@ -1,4 +1,4 @@
-use rust_jcs_transpiler::builder_java::build_program;
+use rust_jcs_transpiler::{builder_java::*, generator_java::*};
 use tree_sitter::Parser;
 use tree_sitter_c_sharp;
 
@@ -19,5 +19,8 @@ fn main() {
     let tree = parser.parse(code, None).unwrap();
     // print_tree(tree.root_node(), 0);
     let program = build_program(tree.root_node(), code);
-    println!("program? {:#?}", program);
+    // println!("program? {:#?}", program);
+    // find_everything(tree.root_node(), code);
+    let java_code = JavaGenerator::generate(&program);
+    println!("{java_code}");
 }

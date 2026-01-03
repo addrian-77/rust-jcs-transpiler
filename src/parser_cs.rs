@@ -20,10 +20,18 @@ pub fn find_classes(node: Node, source: &str, classes: &mut Vec<Class>) {
 
 pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
     if node.kind() == "method_declaration" {
-        if let Some(name_node) = node.child_by_field_name("name") {
-            let name = source[name_node.byte_range()].to_string();
-            methods.push(Method { name })
-        }
+        // let mut cursor = node.walk();
+        // for child in node.children(&mut cursor) {
+        //     println!("kind? {}", child.);
+        // }
+        // panic!();
+        let name_node = node.child_by_field_name("name").unwrap();
+        // let type_node = node.child_by_field_name("block").unwrap();
+
+        // let return_type = source[type_node.byte_range()].to_string();
+        let name = source[name_node.byte_range()].to_string();
+        // println!("found method type {return_type}");
+        methods.push(Method { name })
     }
 
     let mut cursor = node.walk();
@@ -45,10 +53,13 @@ pub fn print_tree(node: Node, indent: usize) {
 }
 
 pub fn find_everything(node: Node, source: &str) {
-    println!("node grammar name {}", node.grammar_name());
     if let Some(name_node) = node.child_by_field_name("name") {
         let name = source[name_node.byte_range()].to_string();
-        println!("kind: {}, name: {}", node.kind(), name);
+        print!("name: {name} ");
+    }
+    if let Some(type_node) = node.child_by_field_name("type") {
+        let typ = source[type_node.byte_range()].to_string();
+        print!("type: {typ}\n");
     }
 
     let mut cursor = node.walk();
