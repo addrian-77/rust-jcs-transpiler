@@ -1,4 +1,4 @@
-use rust_jcs_transpiler::parser_cs::*;
+use rust_jcs_transpiler::builder_java::build_program;
 use tree_sitter::Parser;
 use tree_sitter_c_sharp;
 
@@ -17,5 +17,7 @@ fn main() {
         .expect("Error loading C# parser");
 
     let tree = parser.parse(code, None).unwrap();
-    print_tree(tree.root_node(), 0);
+    // print_tree(tree.root_node(), 0);
+    let program = build_program(tree.root_node(), code);
+    println!("program? {:#?}", program);
 }
