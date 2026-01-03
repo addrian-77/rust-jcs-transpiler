@@ -1,0 +1,21 @@
+use rust_jcs_transpiler::parser_cs::*;
+use tree_sitter::Parser;
+use tree_sitter_c_sharp;
+
+fn main() {
+    let code = r#"
+    class Test {
+        int Add(int a, int b) {
+            return a + b;
+        }
+    }"#;
+
+    let mut parser = Parser::new();
+    let language = tree_sitter_c_sharp::LANGUAGE;
+    parser
+        .set_language(&language.into())
+        .expect("Error loading C# parser");
+
+    let tree = parser.parse(code, None).unwrap();
+    print_tree(tree.root_node(), 0);
+}
