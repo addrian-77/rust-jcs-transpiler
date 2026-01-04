@@ -15,6 +15,7 @@ pub struct Method {
     pub return_type: Type,
     pub modifiers: Vec<Modifier>,
     pub parameters: Vec<Variable>,
+    pub body: Vec<Statement>,
 }
 
 #[derive(Debug)]
@@ -40,4 +41,55 @@ pub enum Modifier {
 pub struct Variable {
     pub typ: Type,
     pub name: String,
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    VariableDeclaration {
+        variable: Variable,
+        value: Option<Expression>,
+    },
+    Assignment {
+        target: String,
+        value: Expression,
+    },
+    Return(Option<Expression>),
+    Expression(Expression),
+}
+
+#[derive(Debug)]
+pub enum Expression {
+    Literal(Literal),
+    Variable(String),
+    BinaryExpression {
+        left: Box<Expression>,
+        operator: BinaryOperator,
+        right: Box<Expression>,
+    },
+    Call {
+        function: String,
+        arguments: Vec<Expression>,
+    },
+}
+
+#[derive(Debug)]
+pub enum Literal {
+    Int(i32),
+    Bool(bool),
+    String(String),
+    Double(f64),
+}
+
+#[derive(Debug)]
+pub enum BinaryOperator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Le,
+    Ge,
 }

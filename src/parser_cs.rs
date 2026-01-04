@@ -45,9 +45,25 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
         }
         let body_node = node.child_by_field_name("body").unwrap();
 
+        // search statements inside body
+        let mut body_statements: Vec<Statement> = Vec::new();
         for i in 0..body_node.child_count() {
             let child = body_node.child(i as u32).unwrap();
-            if child.kind() == "local_declaration_statement" {}
+            if child.kind() == "local_declaration_statement" {
+                body_statements.push(extract_var(child, source));
+            }
+            if child.kind() == "if_statement" {
+                body_statements.push(extract_if(child, source));
+            }
+            if child.kind() == "for_statement" {
+                body_statements.push(extract_for(child, source));
+            }
+            if child.kind() == "while_statement" {
+                body_statements.push(extract_while(child, source));
+            }
+            if child.kind() == "expression_statement" {
+                body_statements.push(extract_expression(child, source));
+            }
         }
 
         let modifiers = match_cs_modifiers(modifiers_raw);
@@ -60,6 +76,7 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
             return_type: match_cs_type(&return_type),
             modifiers,
             parameters,
+            body: body_statements,
         })
     }
 
@@ -105,6 +122,22 @@ pub fn match_cs_parameters(parameters: Vec<&str>) -> Vec<Variable> {
         })
     }
     out
+}
+
+pub fn extract_var(node: Node, source: &str) -> Statement {
+    todo!();
+}
+pub fn extract_if(node: Node, source: &str) -> Statement {
+    todo!();
+}
+pub fn extract_for(node: Node, source: &str) -> Statement {
+    todo!();
+}
+pub fn extract_while(node: Node, source: &str) -> Statement {
+    todo!();
+}
+pub fn extract_expression(node: Node, source: &str) -> Statement {
+    todo!();
 }
 
 // debug functions
