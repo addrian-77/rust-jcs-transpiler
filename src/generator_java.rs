@@ -38,7 +38,13 @@ impl JavaGenerator {
     }
 
     pub fn create_method(&mut self, method: &Method) {
-        self.create_line(&format!("void {} {{", method.name));
+        let modifiers = java_modifier(&method.modifiers);
+        let return_type = java_type(&method.return_type);
+        let parameters = java_parameters(&method.parameters);
+        self.create_line(&format!(
+            "{}{} {} ({}){{",
+            modifiers, return_type, method.name, parameters
+        ));
         self.indent += 1;
 
         self.indent -= 1;
@@ -50,4 +56,44 @@ impl JavaGenerator {
         self.output.push_str(line);
         self.output.push_str("\n");
     }
+}
+
+pub fn java_modifier(modifiers: &Vec<Modifier>) -> String {
+    let mut out = String::new();
+    for modifier in modifiers {
+        match modifier {
+            Modifier::Public => out.push_str("public "),
+            Modifier::Private => out.push_str("private "),
+            Modifier::Static => out.push_str("static "),
+            _ => (),
+        }
+    }
+    out
+}
+
+pub fn java_type(typ: &Type) -> String {
+    match typ {
+        Type::Void => "void".to_string(),
+        Type::Int => "int".to_string(),
+        Type::Bool => "boolean".to_string(),
+        Type::String => "String".to_string(),
+        Type::Float => "float".to_string(),
+        Type::Double => "double".to_string(),
+        Type::Unknown => "Object".to_string(),
+    }
+}
+
+pub fn java_parameters(parameters: &Vec<Variable>) -> String {
+    let mut out = String::new();
+    for parameter in parameters {
+        out.push_str(&java_type(&parameter.typ));
+        out.push(' ');
+        out.push_str(&parameter.name);
+        out.push_str(", ");
+    }
+    if !parameters.is_empty() {
+        out.pop();
+        out.pop();
+    }
+    out
 }

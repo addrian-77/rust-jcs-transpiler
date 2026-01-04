@@ -20,24 +20,91 @@ pub fn find_classes(node: Node, source: &str, classes: &mut Vec<Class>) {
 
 pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
     if node.kind() == "method_declaration" {
-        // let mut cursor = node.walk();
-        // for child in node.children(&mut cursor) {
-        //     println!("kind? {}", child.);
-        // }
-        // panic!();
-        let name_node = node.child_by_field_name("name").unwrap();
-        // let type_node = node.child_by_field_name("block").unwrap();
+        let mut modifiers_raw: Vec<&str> = Vec::new();
+        for i in 0..node.child_count() {
+            let child = node.child(i as u32).unwrap();
+            if child.kind() == "modifier" {
+                // println!("modifier {}", source[child.byte_range()].to_string());
+                modifiers_raw.push(&source[child.byte_range()]);
+            } else {
+                break;
+            }
+        }
 
-        // let return_type = source[type_node.byte_range()].to_string();
+        let name_node = node.child_by_field_name("name").unwrap();
+        let type_node = node.child_by_field_name("returns").unwrap();
+
+        let mut parameters_raw: Vec<&str> = Vec::new();
+        let parameters_node = node.child_by_field_name("parameters").unwrap();
+        for i in 0..parameters_node.child_count() {
+            let child = parameters_node.child(i as u32).unwrap();
+            if child.kind() == "parameter" {
+                println!("param {}", source[child.byte_range()].to_string());
+                parameters_raw.push(&source[child.byte_range()]);
+            }
+        }
+        let body_node = node.child_by_field_name("body").unwrap();
+
+        for i in 0..body_node.child_count() {
+            let child = body_node.child(i as u32).unwrap();
+            if child.kind() == "local_declaration_statement" {}
+        }
+
+        let modifiers = match_cs_modifiers(modifiers_raw);
         let name = source[name_node.byte_range()].to_string();
-        // println!("found method type {return_type}");
-        methods.push(Method { name })
+        let return_type = source[type_node.byte_range()].to_string();
+        let parameters = match_cs_parameters(parameters_raw);
+
+        methods.push(Method {
+            name,
+            return_type: match_cs_type(&return_type),
+            modifiers,
+            parameters,
+        })
     }
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         find_methods(child, source, methods);
     }
+}
+
+pub fn match_cs_type(s: &str) -> Type {
+    match s {
+        "void" => Type::Void,
+        "int" => Type::Int,
+        "bool" => Type::Bool,
+        "string" => Type::String,
+        "float" => Type::Float,
+        "double" => Type::Double,
+        _ => Type::Unknown,
+    }
+}
+
+pub fn match_cs_modifiers(modifiers: Vec<&str>) -> Vec<Modifier> {
+    let mut out: Vec<Modifier> = Vec::new();
+    for modifier in modifiers {
+        match modifier {
+            "public" => out.push(Modifier::Public),
+            "private" => out.push(Modifier::Private),
+            "static" => out.push(Modifier::Static),
+            _ => out.push(Modifier::Unknown),
+        }
+    }
+    out
+}
+
+pub fn match_cs_parameters(parameters: Vec<&str>) -> Vec<Variable> {
+    let mut out: Vec<Variable> = Vec::new();
+    for parameter in parameters {
+        let param_raw = parameter.split_once(" ").unwrap();
+        let typ = match_cs_type(param_raw.0);
+        out.push(Variable {
+            typ,
+            name: param_raw.1.to_string(),
+        })
+    }
+    out
 }
 
 // debug functions
@@ -53,14 +120,19 @@ pub fn print_tree(node: Node, indent: usize) {
 }
 
 pub fn find_everything(node: Node, source: &str) {
-    if let Some(name_node) = node.child_by_field_name("name") {
-        let name = source[name_node.byte_range()].to_string();
-        print!("name: {name} ");
-    }
-    if let Some(type_node) = node.child_by_field_name("type") {
-        let typ = source[type_node.byte_range()].to_string();
-        print!("type: {typ}\n");
-    }
+    // if node.kind() == "variable_declarator" {
+    // for i in 0..node.child_count() {
+    // let child = node.child(0 as u32).unwrap();
+    let field = node.field_name_for_child(0 as u32);
+
+    println!(
+        "kind = {:<20} field = {:?} text = {}",
+        node.kind(),
+        field,
+        source[node.byte_range()].to_string()
+    );
+    // }
+    // }
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
