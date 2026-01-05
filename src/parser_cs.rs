@@ -125,7 +125,96 @@ pub fn match_cs_parameters(parameters: Vec<&str>) -> Vec<Variable> {
 }
 
 pub fn extract_var(node: Node, source: &str) -> Statement {
-    todo!();
+    let mut cursor = node.walk();
+    let declaration_node = node
+        .children(&mut cursor)
+        .find(|n| n.kind() == "variable_declaration")
+        .expect("Expected variable declaration");
+
+    cursor = declaration_node.walk();
+    let type_node = declaration_node
+        .children(&mut cursor)
+        .find(|n| n.kind() == "predefined_type")
+        .expect("Expected type");
+
+    let typ = match_cs_type(&source[type_node.byte_range()]);
+
+    cursor = declaration_node.walk();
+    let declarator_node = declaration_node
+        .children(&mut cursor)
+        .find(|n| n.kind() == "variable_declarator")
+        .expect("Expected identifier");
+
+    cursor = declarator_node.walk();
+    let identifier_node = declarator_node
+        .children(&mut cursor)
+        .find(|n| n.kind() == "identifier")
+        .expect("Expected identifier");
+
+    let name = source[identifier_node.byte_range()].to_string();
+
+    let literal_lookup = match typ {
+        Type::Int => "integer_literal",
+        Type::Bool => "boolean_literal",
+        Type::String => "string_literal",
+        Type::Float => "real_literal",
+        Type::Double => "real_literal",
+        _ => "",
+    };
+
+    let mut literal = Some(Literal::Int(0));
+
+    cursor = declarator_node.walk();
+    if let Some(literal_node) = declarator_node
+        .children(&mut cursor)
+        .find(|n| n.kind() == literal_lookup)
+    {
+        println!("inside?");
+        let mut s = source[literal_node.byte_range()].to_string();
+        literal = Some(match typ {
+            Type::Int => Literal::Int(s.parse::<i32>().unwrap()),
+            Type::Bool => {
+                if s.to_lowercase() == "true" {
+                    Literal::Bool(true)
+                } else {
+                    Literal::Bool(false)
+                }
+            }
+            Type::String => Literal::String(s),
+            Type::Float => {
+                if s.ends_with("f") || s.ends_with("F") {
+                    s.pop();
+                }
+                Literal::Float(s.parse::<f32>().unwrap())
+            }
+            Type::Double => {
+                if s.ends_with("d") || s.ends_with("D") {
+                    s.pop();
+                }
+                Literal::Double(s.parse::<f64>().unwrap())
+            }
+            // this case is unreachable
+            _ => Literal::Int(-1),
+        });
+    } else {
+        println!("uninitialized var");
+    }
+
+    println!("typ {:#?}", typ);
+    println!("name {:#?}", name);
+    println!("literal {:#?}", literal);
+
+    let mut value: Option<Expression> = None;
+
+    match literal {
+        Some(l) => value = Some(Expression::Literal(l)),
+        _ => (),
+    }
+    let var_statement = Statement::VariableDeclaration {
+        variable: Variable { typ, name },
+        value,
+    };
+    var_statement
 }
 pub fn extract_if(node: Node, source: &str) -> Statement {
     todo!();
@@ -152,14 +241,15 @@ pub fn print_tree(node: Node, indent: usize) {
     }
 }
 
-pub fn find_everything(node: Node, source: &str) {
+pub fn find_everything(node: Node, source: &str, indent: usize) {
     // if node.kind() == "variable_declarator" {
     // for i in 0..node.child_count() {
     // let child = node.child(0 as u32).unwrap();
     let field = node.field_name_for_child(0 as u32);
 
     println!(
-        "kind = {:<20} field = {:?} text = {}",
+        "{}kind = {:<20} field = {:?} text = {}",
+        " ".repeat(indent).to_string(),
         node.kind(),
         field,
         source[node.byte_range()].to_string()
@@ -169,6 +259,6 @@ pub fn find_everything(node: Node, source: &str) {
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        find_everything(child, source);
+        find_everything(child, source, indent + 1);
     }
 }

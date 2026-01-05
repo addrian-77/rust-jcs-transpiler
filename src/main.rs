@@ -10,9 +10,12 @@ fn main() {
     {
         public static void Main(string[] args, int a, int b)
         {
+            bool init_b = true;
+            bool fc;
             int c = 2;
             int e = 3;
             float d = 2.3f;
+            double dbvar = 5.33d;
             string s = "hello?";
             int arr[3] = {1, 2, 3};
 
@@ -43,9 +46,9 @@ fn main() {
 
     let tree = parser.parse(code, None).unwrap();
     // print_tree(tree.root_node(), 0);
+    find_everything(tree.root_node(), code, 0);
     let program = build_program(tree.root_node(), code);
     // println!("program? {:#?}", program);
-    find_everything(tree.root_node(), code);
     let java_code = JavaGenerator::generate(&program);
     println!("{java_code}");
 }
