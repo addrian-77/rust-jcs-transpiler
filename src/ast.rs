@@ -66,6 +66,10 @@ pub enum Expression {
         operator: BinaryOperator,
         right: Box<Expression>,
     },
+    UnaryExpression {
+        operator: UnaryOperator,
+        right: Box<Expression>,
+    },
     Call {
         function: String,
         arguments: Vec<Expression>,
@@ -93,4 +97,12 @@ pub enum BinaryOperator {
     Gt,
     Le,
     Ge,
+    And,
+    Or,
+}
+
+#[derive(Debug)]
+pub enum UnaryOperator {
+    Not,
+    Neg,
 }

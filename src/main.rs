@@ -13,11 +13,21 @@ fn main() {
             bool init_b = true;
             bool fc;
             int c = 2;
-            int e = 3;
+            int e = c + 3;
+            int f = 2 + 3 + c + e;
             float d = 2.3f;
             double dbvar = 5.33d;
             string s = "hello?";
             int arr[3] = {1, 2, 3};
+            bool fas = !init_b && init_b;
+
+            if (init_b == true) {
+                c = c + c;
+            }
+
+            if (!init_b == true) {
+                c = c + c;
+            }
 
             if (e > c)
             {

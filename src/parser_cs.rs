@@ -62,7 +62,7 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
                 body_statements.push(extract_while(child, source));
             }
             if child.kind() == "expression_statement" {
-                body_statements.push(extract_expression(child, source));
+                body_statements.push(Statement::Expression(extract_expression(child, source)));
             }
         }
 
@@ -163,6 +163,7 @@ pub fn extract_var(node: Node, source: &str) -> Statement {
     };
 
     let mut literal = Some(Literal::Int(0));
+    let mut value: Option<Expression> = None;
 
     cursor = declarator_node.walk();
     if let Some(literal_node) = declarator_node
@@ -197,14 +198,22 @@ pub fn extract_var(node: Node, source: &str) -> Statement {
             _ => Literal::Int(-1),
         });
     } else {
-        println!("uninitialized var");
+        // we can also have a binary expression when declaring a variable
+        if let Some(binary_expr_node) = declarator_node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "binary_expression")
+        {
+            value = Some(extract_binary_expression(binary_expr_node, source));
+            literal = None;
+        } else {
+            println!("uninitialized var");
+        }
     }
 
     println!("typ {:#?}", typ);
     println!("name {:#?}", name);
     println!("literal {:#?}", literal);
-
-    let mut value: Option<Expression> = None;
+    println!("value {:#?}", value);
 
     match literal {
         Some(l) => value = Some(Expression::Literal(l)),
@@ -216,6 +225,64 @@ pub fn extract_var(node: Node, source: &str) -> Statement {
     };
     var_statement
 }
+
+pub fn extract_binary_expression(node: Node, source: &str) -> Expression {
+    let left_node = node
+        .child_by_field_name("left")
+        .expect("binary_expression missing left");
+
+    let right_node = node
+        .child_by_field_name("right")
+        .expect("binary_expression missing right");
+
+    let operator_node = node
+        .child_by_field_name("operator")
+        .expect("binary_expression missing operator");
+
+    let left = Box::new(extract_expression(left_node, source));
+    let right = Box::new(extract_expression(right_node, source));
+
+    let operator = match &source[operator_node.byte_range()] {
+        "+" => BinaryOperator::Add,
+        "-" => BinaryOperator::Sub,
+        "*" => BinaryOperator::Mul,
+        "/" => BinaryOperator::Div,
+        "==" => BinaryOperator::Eq,
+        "!=" => BinaryOperator::Ne,
+        "<" => BinaryOperator::Lt,
+        ">" => BinaryOperator::Gt,
+        "<=" => BinaryOperator::Le,
+        ">=" => BinaryOperator::Ge,
+        "&&" => BinaryOperator::And,
+        "||" => BinaryOperator::Or,
+        _ => panic!("Unknown operator"),
+    };
+
+    Expression::BinaryExpression {
+        left,
+        operator,
+        right,
+    }
+}
+
+pub fn extract_unary_expression(node: Node, source: &str) -> Expression {
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    let operator_node = children.next().expect("Expected unary operator");
+    let operand_node = children.next().expect("Expected unary operand");
+
+    let operator = match &source[operator_node.byte_range()] {
+        "!" => UnaryOperator::Not,
+        "-" => UnaryOperator::Neg,
+        _ => panic!("Unsupported unary operator"),
+    };
+
+    let right = Box::new(extract_expression(operand_node, source));
+
+    Expression::UnaryExpression { operator, right }
+}
+
 pub fn extract_if(node: Node, source: &str) -> Statement {
     todo!();
 }
@@ -225,8 +292,41 @@ pub fn extract_for(node: Node, source: &str) -> Statement {
 pub fn extract_while(node: Node, source: &str) -> Statement {
     todo!();
 }
-pub fn extract_expression(node: Node, source: &str) -> Statement {
-    todo!();
+pub fn extract_expression(node: Node, source: &str) -> Expression {
+    match node.kind() {
+        "binary_expression" => extract_binary_expression(node, source),
+        "prefix_unary_expression" => extract_unary_expression(node, source),
+        "integer_literal" => Expression::Literal(Literal::Int(
+            source[node.byte_range()].parse::<i32>().unwrap(),
+        )),
+        "real_literal" => {
+            let mut s = source[node.byte_range()].to_string();
+            if s.ends_with("f") {
+                s.pop();
+                Expression::Literal(Literal::Float(
+                    source[node.byte_range()].parse::<f32>().unwrap(),
+                ))
+            } else if s.ends_with("d") {
+                s.pop();
+                Expression::Literal(Literal::Double(s.parse::<f64>().unwrap()))
+            } else {
+                Expression::Literal(Literal::Float(s.parse::<f32>().unwrap()))
+            }
+        }
+        "boolean_literal" => {
+            let s = &source[node.byte_range()];
+            if s == "true" {
+                Expression::Literal(Literal::Bool(true))
+            } else {
+                Expression::Literal(Literal::Bool(false))
+            }
+        }
+        "string_literal" => {
+            Expression::Literal(Literal::String(source[node.byte_range()].to_string()))
+        }
+        "identifier" => Expression::Variable(source[node.byte_range()].to_string()),
+        _ => panic!("Unsupported expression: {}", node.kind()),
+    }
 }
 
 // debug functions
