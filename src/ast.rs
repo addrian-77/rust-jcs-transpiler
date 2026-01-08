@@ -53,6 +53,11 @@ pub enum Statement {
         target: String,
         value: Expression,
     },
+    If {
+        condition: Expression,
+        then_body: Vec<Statement>,
+        else_body: Vec<Statement>,
+    },
     Return(Option<Expression>),
     Expression(Expression),
 }

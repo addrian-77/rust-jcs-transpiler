@@ -24,6 +24,9 @@ fn main() {
             if (init_b == true) {
                 c = c + c;
             }
+            else {
+                c = c - c;
+            }
 
             if (!init_b == true) {
                 c = c + c;
@@ -58,7 +61,7 @@ fn main() {
     // print_tree(tree.root_node(), 0);
     find_everything(tree.root_node(), code, 0);
     let program = build_program(tree.root_node(), code);
-    // println!("program? {:#?}", program);
+    println!("program? {:#?}", program);
     let java_code = JavaGenerator::generate(&program);
     println!("{java_code}");
 }
