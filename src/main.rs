@@ -51,17 +51,24 @@ fn main() {
         }
     }"#;
 
+    // create a new parser
     let mut parser = Parser::new();
+    // set the programming language
     let language = tree_sitter_c_sharp::LANGUAGE;
     parser
         .set_language(&language.into())
         .expect("Error loading C# parser");
 
+    // parse the code, create a tree containing everything
     let tree = parser.parse(code, None).unwrap();
+
     // print_tree(tree.root_node(), 0);
     find_everything(tree.root_node(), code, 0);
+
+    // build the program using our parser
     let program = build_program(tree.root_node(), code);
     println!("program? {:#?}", program);
+    // build the program based on the ast
     let java_code = JavaGenerator::generate(&program);
     println!("{java_code}");
 }

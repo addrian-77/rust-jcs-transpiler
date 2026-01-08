@@ -13,30 +13,41 @@ impl JavaGenerator {
         }
     }
 
+    /// Calling this function will continue calling child functions until the program is complete
     pub fn generate(program: &Program) -> String {
         let mut generator = JavaGenerator::new();
+        // call the create_program
         generator.create_program(program);
+        // return the output
         generator.output
     }
 
+    /// This function will iterate through a program's classes and call further creator functions
     pub fn create_program(&mut self, program: &Program) {
         for class in &program.classes {
             self.create_class(class);
         }
     }
 
+    /// This function itereates through a class's methods and call further creator functions
     pub fn create_class(&mut self, class: &Class) {
+        // begin creating actual lines of code
         self.create_line(&format!("class {} {{", class.name));
+        // indent
         self.indent += 1;
 
+        // iterate methods, create them
         for method in &class.methods {
             self.create_method(method);
         }
 
+        // substract indent
         self.indent -= 1;
+        // close the program
         self.create_line("}");
     }
 
+    /// This function creates a method's body
     pub fn create_method(&mut self, method: &Method) {
         let modifiers = java_modifier(&method.modifiers);
         let return_type = java_type(&method.return_type);
@@ -51,6 +62,7 @@ impl JavaGenerator {
         self.create_line("}");
     }
 
+    /// This function creates a line of code by applying an indent
     pub fn create_line(&mut self, line: &str) {
         self.output.push_str(&"    ".repeat(self.indent));
         self.output.push_str(line);
@@ -58,6 +70,7 @@ impl JavaGenerator {
     }
 }
 
+/// Helper function for parsing modifiers
 pub fn java_modifier(modifiers: &Vec<Modifier>) -> String {
     let mut out = String::new();
     for modifier in modifiers {
@@ -71,6 +84,7 @@ pub fn java_modifier(modifiers: &Vec<Modifier>) -> String {
     out
 }
 
+/// Helper function for parsing types
 pub fn java_type(typ: &Type) -> String {
     match typ {
         Type::Void => "void".to_string(),
@@ -83,6 +97,7 @@ pub fn java_type(typ: &Type) -> String {
     }
 }
 
+/// Helper function for parsing parameters
 pub fn java_parameters(parameters: &Vec<Variable>) -> String {
     let mut out = String::new();
     for parameter in parameters {

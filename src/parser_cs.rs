@@ -75,7 +75,6 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
                 body_statements.push(extract_if(child, source));
             }
             if child.kind() == "for_statement" {
-                continue;
                 // extract the for statement
                 body_statements.push(extract_for(child, source));
             }
@@ -172,10 +171,13 @@ pub fn match_cs_parameters(parameters: Vec<&str>) -> Vec<Variable> {
 pub fn extract_var(node: Node, source: &str) -> Statement {
     let mut cursor = node.walk();
     // find the declaration node, this node will contain the other needed data
-    let declaration_node = node
-        .children(&mut cursor)
-        .find(|n| n.kind() == "variable_declaration")
-        .expect("Expected variable declaration");
+    let declaration_node = if node.kind() != "variable_declaration" {
+        node.children(&mut cursor)
+            .find(|n| n.kind() == "variable_declaration")
+            .expect("Expected variable declaration")
+    } else {
+        node
+    };
 
     cursor = declaration_node.walk();
     // the type node will be used to parse a type
@@ -401,8 +403,49 @@ pub fn extract_if(node: Node, source: &str) -> Statement {
 }
 
 pub fn extract_for(node: Node, source: &str) -> Statement {
-    todo!();
+    // initializer
+    let initializer = node.child_by_field_name("initializer").map(|init_node| {
+        Box::new(match init_node.kind() {
+            // the initializer can be either a variable or an expression
+            "local_declaration_statement" => extract_var(init_node, source),
+            "variable_declaration" => extract_var(init_node, source),
+            "expression_statement" => Statement::Expression(extract_expression(init_node, source)),
+            _ => panic!("Unsupported for initializer: {}", init_node.kind()),
+        })
+    });
+
+    // condition
+    let condition = node
+        .child_by_field_name("condition")
+        .map(|cond_node| extract_expression(cond_node, source));
+
+    // increment
+    let increment = node.child_by_field_name("increment").map(|inc_node| {
+        Box::new(match inc_node.kind() {
+            // increment can be an assignment, or another expression
+            "assignment_expression" => extract_assignment(inc_node, source),
+            "expression_statement" => Statement::Expression(extract_expression(inc_node, source)),
+            _ => panic!("Unsupported for increment: {}", inc_node.kind()),
+        })
+    });
+
+    // body
+    let body_node = node
+        .child_by_field_name("body")
+        .expect("for_statement missing body");
+
+    // parse the body using extract_block
+    let body = extract_block(body_node, source);
+
+    // return the statement
+    Statement::For {
+        initializer,
+        condition,
+        increment,
+        body,
+    }
 }
+
 pub fn extract_while(node: Node, source: &str) -> Statement {
     todo!();
 }
@@ -569,7 +612,6 @@ fn extract_block(block_node: Node, source: &str) -> Vec<Statement> {
                 statements.push(extract_while(child, source));
             }
             "for_statement" => {
-                continue;
                 statements.push(extract_for(child, source));
             }
             _ => {}
