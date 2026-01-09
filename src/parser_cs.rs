@@ -79,7 +79,6 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>) {
                 body_statements.push(extract_for(child, source));
             }
             if child.kind() == "while_statement" {
-                continue;
                 // extract the while statement
                 body_statements.push(extract_while(child, source));
             }
@@ -338,28 +337,55 @@ pub fn extract_binary_expression(node: Node, source: &str) -> Expression {
 }
 
 /// This function parses unary expressions
-pub fn extract_unary_expression(node: Node, source: &str) -> Expression {
-    let mut cursor = node.walk();
-    let mut children = node.children(&mut cursor);
+pub fn extract_unary_expression(node: Node, source: &str, prefix: bool) -> Expression {
+    match prefix {
+        true => {
+            let mut cursor = node.walk();
+            let mut children = node.children(&mut cursor);
 
-    // unary expressions always have the same structure
-    // the first node will always be the operator
-    let operator_node = children.next().expect("Expected unary operator");
-    // the following node will always be the operand
-    let operand_node = children.next().expect("Expected unary operand");
+            // unary expressions always have the same structure
+            // the first node will always be the operator
+            let operator_node = children.next().expect("Expected unary operator");
+            // the following node will always be the operand
+            let operand_node = children.next().expect("Expected unary operand");
 
-    // parse the operator
-    let operator = match &source[operator_node.byte_range()] {
-        "!" => UnaryOperator::Not,
-        "-" => UnaryOperator::Neg,
-        _ => panic!("Unsupported unary operator"),
-    };
+            // parse the operator
+            let operator = match &source[operator_node.byte_range()] {
+                "!" => UnaryOperator::Not,
+                "-" => UnaryOperator::Neg,
+                _ => panic!("Unsupported unary operator"),
+            };
 
-    // parse the right of the expression
-    let right = Box::new(extract_expression(operand_node, source));
+            // parse the right of the expression
+            let right = Box::new(extract_expression(operand_node, source));
 
-    // return the unary expression
-    Expression::UnaryExpression { operator, right }
+            // return the unary expression
+            Expression::PrefixUnaryExpression { operator, right }
+        }
+        false => {
+            let mut cursor = node.walk();
+            let mut children = node.children(&mut cursor);
+
+            // unary expressions always have the same structure
+            // the first node will always be the operator
+            let operand_node = children.next().expect("Expected unary operator");
+            // the following node will always be the operand
+            let operator_node = children.next().expect("Expected unary operand");
+
+            // parse the operator
+            let operator = match &source[operator_node.byte_range()] {
+                "++" => UnaryOperator::UAdd,
+                "--" => UnaryOperator::USub,
+                _ => panic!("Unsupported unary operator"),
+            };
+
+            // parse the left of the expression
+            let left = Box::new(extract_expression(operand_node, source));
+
+            // return the unary expression
+            Expression::PostfixUnaryExpression { left, operator }
+        }
+    }
 }
 
 /// This function parses if expressions
@@ -447,14 +473,32 @@ pub fn extract_for(node: Node, source: &str) -> Statement {
 }
 
 pub fn extract_while(node: Node, source: &str) -> Statement {
-    todo!();
+    // condition
+    let condition_node = node
+        .child_by_field_name("condition")
+        .expect("while_statement missing condition");
+
+    let condition = extract_expression(condition_node, source);
+
+    // body
+    let body_node = node
+        .child_by_field_name("body")
+        .expect("while_statement missing body");
+
+    // parse the body using extract_block
+    let body = extract_block(body_node, source);
+
+    // return the while statement
+    Statement::While { condition, body }
 }
+
 pub fn extract_expression(node: Node, source: &str) -> Expression {
     // call different functions depending of the node kind
     match node.kind() {
         "expression_statement" => extract_expression(node.child(0).unwrap(), source),
         "binary_expression" => extract_binary_expression(node, source),
-        "prefix_unary_expression" => extract_unary_expression(node, source),
+        "prefix_unary_expression" => extract_unary_expression(node, source, true),
+        "postfix_unary_expression" => extract_unary_expression(node, source, false),
         "invocation_expression" => extract_call_expression(node, source),
 
         // parse as i32
@@ -608,7 +652,6 @@ fn extract_block(block_node: Node, source: &str) -> Vec<Statement> {
                 statements.push(extract_if(child, source));
             }
             "while_statement" => {
-                continue;
                 statements.push(extract_while(child, source));
             }
             "for_statement" => {

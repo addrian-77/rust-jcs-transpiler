@@ -72,6 +72,10 @@ pub enum Statement {
         increment: Option<Box<Statement>>,   // the increment can be a complex statement
         body: Vec<Statement>,                // body is a vector of statements
     },
+    While {
+        condition: Expression, // the while condition
+        body: Vec<Statement>,  // body, a vec of statements
+    },
     Return(Option<Expression>), // the return of a function
     Expression(Expression),     // a generic expression, handled as a statement
 }
@@ -85,9 +89,13 @@ pub enum Expression {
         operator: BinaryOperator, // the operator
         right: Box<Expression>,   // right side
     },
-    UnaryExpression {
+    PrefixUnaryExpression {
         operator: UnaryOperator, // operator of the expression
         right: Box<Expression>,  // right side of expression
+    },
+    PostfixUnaryExpression {
+        left: Box<Expression>,   // left side of expression
+        operator: UnaryOperator, // operator
     },
     Call {
         function: String,           // function name
@@ -123,6 +131,8 @@ pub enum BinaryOperator {
 
 #[derive(Debug)]
 pub enum UnaryOperator {
-    Not, // !
-    Neg, // - (negative)
+    Not,  // !
+    Neg,  // - (negative)
+    UAdd, // ++
+    USub, // --
 }
