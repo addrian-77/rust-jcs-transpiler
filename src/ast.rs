@@ -9,6 +9,7 @@ pub struct Program {
 pub struct Class {
     pub name: String,
     pub methods: Vec<Method>,
+    pub uses_input: bool,
 }
 
 // here it gets a bit more complicated
