@@ -107,6 +107,100 @@ class Program {
 
         assert_eq!(expected_code, generate_code(input_code));
     }
+
+    #[test]
+    fn test_code_big() {
+        let input_code = r#"using System;
+
+class Program
+{
+    public static void Main()
+    {
+        int a = 0;
+        bool init_b = true;
+        bool fc;
+        int c = 2;
+        int e = c + 3;
+        int f = 2 + 3 + c + e;
+        float d = 2.3f;
+        double dbvar = 5.33d;
+        string s = "hello?";
+        int arr[3] = {1, 2, 3};
+        bool fas = !init_b && init_b;
+
+        if (init_b == true) {
+            c = c + c;
+        }
+        else {
+            c = c - c;
+        }
+
+        if (!init_b == true) {
+            c = c + c;
+        }
+
+        if (e > c)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                while (e > 0)
+                {
+                    e--;
+                }
+            }
+        }
+
+        e = c;
+        e = e + c;
+
+        Console.WriteLine("a+b" + a);
+        Console.WriteLine("Hello World!");    
+
+        int x = int.Parse(Console.ReadLine());
+    }
+}"#;
+
+        let expected_code = r#"import java.util.Scanner;
+class Program {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int a = 0;
+        boolean init_b = true;
+        boolean fc;
+        int c = 2;
+        int e = c + 3;
+        int f = 2 + 3 + c + e;
+        float d = 2.3f;
+        double dbvar = 5.33d;
+        String s = "hello?";
+        int arr;
+        boolean fas = !init_b && init_b;
+        if (init_b == true) {
+            c = c + c;
+        }
+        else {
+            c = c - c;
+        }
+        if (!init_b == true) {
+            c = c + c;
+        }
+        if (e > c) {
+            for (int i = 0; i < 5; i++) {
+                while (e > 0) {
+                    e--;
+                }
+            }
+        }
+        e = c;
+        e = e + c;
+        System.out.println("a+b" + a);
+        System.out.println("Hello World!");
+        int x = scanner.nextInt();
+    }
+}
+"#;
+        assert_eq!(expected_code, generate_code(input_code));
+    }
     /// This function works just like the main function
     fn generate_code(input_code: &str) -> String {
         let mut parser = Parser::new();

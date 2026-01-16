@@ -6,7 +6,11 @@ use crate::ast::*;
 pub fn find_classes(node: Node, source: &str, classes: &mut Vec<Class>) {
     // extract class definition
     if node.kind() == "class_declaration" {
-        if let Some(name_node) = node.child_by_field_name("name") {
+        let mut cursor = node.walk();
+        if let Some(name_node) = node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "identifier")
+        {
             // obtain the name and methods
             let name = source[name_node.byte_range()].to_string();
             // extract methods here
@@ -33,6 +37,7 @@ pub fn find_classes(node: Node, source: &str, classes: &mut Vec<Class>) {
 pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>, uses_input: &mut bool) {
     // extract method definition
     if node.kind() == "method_declaration" {
+        let mut cursor = node.walk();
         // obtain modifiers, save them in a &str vector
         let mut modifiers_raw: Vec<&str> = Vec::new();
         for i in 0..node.child_count() {
@@ -45,12 +50,21 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>, uses_in
         }
 
         // extract function details
-        let name_node = node.child_by_field_name("name").unwrap();
-        let type_node = node.child_by_field_name("returns").unwrap();
+        let name_node = node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "identifier")
+            .expect("Expected variable declaration");
+        let type_node = node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "predefined_type")
+            .expect("Expected variable declaration");
 
         // obtain parameters
         let mut parameters_raw: Vec<&str> = Vec::new();
-        let parameters_node = node.child_by_field_name("parameters").unwrap();
+        let parameters_node = node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "parameter_list")
+            .expect("Expected variable declaration");
         // iterate through the parameters_node's children
         for i in 0..parameters_node.child_count() {
             let child = parameters_node.child(i as u32).unwrap();
@@ -62,7 +76,10 @@ pub fn find_methods(node: Node, source: &str, methods: &mut Vec<Method>, uses_in
         }
 
         // obtain the body node
-        let body_node = node.child_by_field_name("body").unwrap();
+        let body_node = node
+            .children(&mut cursor)
+            .find(|n| n.kind() == "block")
+            .expect("Expected variable declaration");
 
         // search statements inside body
         let mut body_statements: Vec<Statement> = Vec::new();
@@ -302,9 +319,11 @@ pub fn extract_while(node: Node, source: &str, uses_input: &mut bool) -> Stateme
     let condition = extract_expression(condition_node, source, uses_input);
 
     // body
+    let mut cursor = node.walk();
     let body_node = node
-        .child_by_field_name("body")
-        .expect("while_statement missing body");
+        .children(&mut cursor)
+        .find(|n| n.kind() == "block")
+        .expect("Expected body node (while)");
 
     // parse the body using extract_block
     let body = extract_block(body_node, source, uses_input);
@@ -656,20 +675,18 @@ pub fn find_everything(node: Node, source: &str, indent: usize) {
     // if node.kind() == "variable_declarator" {
     // for i in 0..node.child_count() {
     // let child = node.child(0 as u32).unwrap();
-    let field = node.field_name_for_child(0 as u32);
+    let mut cursor = node.walk();
 
     println!(
-        "{}kind = {:<20} field = {:?} text = {}",
-        " ".repeat(indent).to_string(),
+        "{}kind = {:<20} field = {:?} text = {}\n",
+        " ".repeat(indent),
         node.kind(),
-        field,
+        node.field_name_for_child(0),
         source[node.byte_range()].to_string()
     );
-    // }
-    // }
-
-    let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         find_everything(child, source, indent + 1);
     }
+    // }
+    // }
 }
